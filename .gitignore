@@ -1,3 +1,9 @@
+# Executables
+helloMCI
+upscale_steadystate_analytic
+printForceInfo
+mirror_cpgrid
+
 # Compiled Object files
 *.slo
 *.lo
