@@ -84,76 +84,108 @@ int main(int argc, char** argv)
     size[2] = gridlimits[5]-gridlimits[4];
 
     const int N = 1000;
-    const double lmin = 10;
-    vector<double> lvec;
-    vector<double> corrvec;
-    for (double l = size[0]/2; l > 10; l -= lmin) {
-        cout << "Calculating correlation for l=" << l << "... ";
-	double sumpor = 0.0;
-	double varpor = 0.0;
-	int nsumpor = 0;
-	for (int i=0; i<N; ++i) {
-	    GridInterface::Vector pos;
-	    pos[0] = ((double) rand() / (RAND_MAX))*(size[0]-l) + gridlimits[0];
-	    pos[1] = ((double) rand() / (RAND_MAX))*size[1] + gridlimits[2];
-	    pos[2] = ((double) rand() / (RAND_MAX))*size[2] + gridlimits[4];
-	    int cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), pos);
-	    if (cell == -1) {
-		cerr << "Could not find cell index at position [" 
-		     << pos[0] << ", " << pos[1] << ", " << pos[2] << "]" << endl;
-	    }
+    const double lmin [3] = {10, 10 ,1};
+    vector< vector<double> > lvec;
+    vector< vector<double> > corrvec;
+    for (int dir=0; dir<3; ++dir) {
+	cout << "Correlation direction " << dir << ":" << endl;
+	vector<double> tmp;
+	lvec.push_back(tmp);
+	corrvec.push_back(tmp);
+	for (double l = size[dir]/2; l > lmin[dir]; l -= lmin[dir]) {
+	    cout << "Calculating correlation for l=" << l << "... ";
+	    double sumpor = 0.0;
+	    double varpor = 0.0;
+	    int nsumpor = 0;
+	    for (int i=0; i<N; ++i) {
+		GridInterface::Vector pos;
+		for (int d=0; d<3; ++d) {
+		    if (d == dir) {
+			pos[d] = ((double) rand() / (RAND_MAX))*(size[d]-l) + gridlimits[2*d];
+		    }
+		    else {
+		    	pos[d] = ((double) rand() / (RAND_MAX))*size[d] + gridlimits[2*d];  
+		    }
+		}
+		int cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), pos);
+		if (cell == -1) {
+		    cerr << "Could not find cell index at position [" 
+			<< pos[0] << ", " << pos[1] << ", " << pos[2] << "]" << endl;
+		}
+		
+		GridInterface::Vector next_pos = pos;
+		next_pos[dir] = pos[dir] + l;
+		int next_cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), next_pos);
+		if (next_cell == -1) {
+		    cerr << "Could not find cell index at position [" 
+			<< next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "]" << endl;
+		}
+
+		double poro1 = rock.porosity(cell);
+		double poro2 = rock.porosity(next_cell);
+
+		sumpor += (poro1 - meanporo) * (poro2 - meanporo);
+		varpor += (poro1 - meanporo) * (poro1 - meanporo);
+		nsumpor++;
+	      
+		/*
+		cout << "Position [" << pos[0] << ", " << pos[1] << ", " << pos[2] << "], "
+		    << "(i " << cell << ") "
+		    << "Next position [" << next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "], "
+		    << "(i " << next_cell << ") "
+		    << "Length " << l << ", poro1 " << poro1 << ", poro2 " << poro2 << endl;
 	    
-	    GridInterface::Vector next_pos = pos;
-	    next_pos[0] = pos[0] + l;
-	    int next_cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), next_pos);
-	    if (next_cell == -1) {
-		cerr << "Could not find cell index at position [" 
-		     << next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "]" << endl;
+		*/
 	    }
-
-	    double poro1 = rock.porosity(cell);
-	    double poro2 = rock.porosity(next_cell);
-
-	    sumpor += (poro1 - meanporo) * (poro2 - meanporo);
-	    varpor += (poro1 - meanporo) * (poro1 - meanporo);
-	    nsumpor++;
-	   
-	    /*
-	    cout << "Position [" << pos[0] << ", " << pos[1] << ", " << pos[2] << "], "
-		 << "(i " << cell << ") "
-		 << "Next position [" << next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "], "
-		 << "(i " << next_cell << ") "
-		 << "Length " << l << ", poro1 " << poro1 << ", poro2 " << poro2 << endl;
-	
-	    */
+	    varpor = varpor/nsumpor;
+	    sumpor = sumpor/(nsumpor*varpor);
+	    
+	    cout << "Correlation: " << sumpor << endl;
+	    
+	    lvec[dir].push_back(l);
+	    corrvec[dir].push_back(sumpor);
+	  
 	}
-	varpor = varpor/nsumpor;
-	sumpor = sumpor/(nsumpor*varpor);
-	
-	cout << "Correlation: " << sumpor << endl;
-	
-	lvec.push_back(l);
-	corrvec.push_back(sumpor);
+	cout << endl;
     }
-
-    stringstream outputtmp;
+    
+    stringstream outputtmp, outputtmpx, outputtmpy, outputtmpz;
     
     outputtmp << "#########################################################################" << endl
 	      << "# Correlation lengths for model " << ECLIPSEFILENAME << endl
-	      << "# Length  Corr" << endl;
-    for (int i=0; i<lvec.size(); ++i) {
-	outputtmp << lvec[i] << "\t" << corrvec[i] << endl;
+	      << "#########################################################################" << endl;
+	      
+    outputtmpx << "# Lengthx  Corrx" << endl;
+    outputtmpy << "# Lengthy  Corry" << endl;
+    outputtmpz << "# Lengthz  Corrz" << endl;
+
+    for (int i=0; i<lvec[0].size(); ++i) {
+	outputtmpx << lvec[0][i] << "\t" << corrvec[0][i] << endl;
+    }
+    for (int i=0; i<lvec[1].size(); ++i) {
+	outputtmpy << lvec[1][i] << "\t" << corrvec[1][i] << endl;
+    }
+    for (int i=0; i<lvec[2].size(); ++i) {
+	outputtmpz << lvec[2][i] << "\t" << corrvec[2][i] << endl;
     }
     
-    cout << outputtmp.str();
+    cout << outputtmp.str() << outputtmpx.str() << outputtmpy.str() << outputtmpz.str();
     
-    ofstream outfile;
-    string outputfilename = "output_corrlengths.txt";
-    outfile.open(outputfilename, ios::out | ios::trunc);
-    outfile << outputtmp.str();
-    outfile.close();
+    ofstream outfilex, outfiley, outfilez;
     
-    cout << "Output written to " << outputfilename << endl;
+    outfilex.open("output_corrlengths_x.txt", ios::out | ios::trunc);
+    outfilex << outputtmp.str() << outputtmpx.str();
+    outfilex.close();
+    
+    outfiley.open("output_corrlengths_y.txt", ios::out | ios::trunc);
+    outfiley << outputtmp.str() << outputtmpy.str();
+    outfiley.close();    
+    
+    outfilez.open("output_corrlengths_z.txt", ios::out | ios::trunc);
+    outfilez << outputtmp.str() << outputtmpz.str();
+    outfilez.close();    
+    
+    cout << "Output written to files!" << endl;
 
     return 0;
 }
