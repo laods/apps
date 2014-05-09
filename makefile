@@ -14,3 +14,6 @@ mirror_cpgrid:
 
 correlationlengths:
 	g++ -O2 -std=gnu++0x -o bin/correlationlengths source/correlationlengths.cpp -lopmcore -lopmporsol -ldunecornerpoint -llapack -lblas
+
+debug:
+	g++ -g3 -O0 -std=gnu++0x -o bin/correlationlengths source/correlationlengths.cpp -lopmcore -lopmporsol -ldunecornerpoint -llapack -lblas
