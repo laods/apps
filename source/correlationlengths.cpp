@@ -22,6 +22,7 @@ int position2cell(CI ibegin, CI iend, GridInterface::Vector pos)
 	for (FI fi = ci->facebegin(); fi != ci->faceend(); ++fi) {
 	    GridInterface::Vector v = pos - fi->centroid();
 	    if (fi->normal()*v > 0) {
+		succeed = false;
 		break;
 	    }
 	    succeed = true;
@@ -82,7 +83,7 @@ int main(int argc, char** argv)
     size[1] = gridlimits[3]-gridlimits[2];
     size[2] = gridlimits[5]-gridlimits[4];
 
-    const int N = 100;
+    const int N = 1000;
     const double lmin = 10;
     vector<double> lvec;
     vector<double> corrvec;
@@ -115,7 +116,15 @@ int main(int argc, char** argv)
 	    sumpor += (poro1 - meanporo) * (poro2 - meanporo);
 	    varpor += (poro1 - meanporo) * (poro1 - meanporo);
 	    nsumpor++;
-	       
+	   
+	    /*
+	    cout << "Position [" << pos[0] << ", " << pos[1] << ", " << pos[2] << "], "
+		 << "(i " << cell << ") "
+		 << "Next position [" << next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "], "
+		 << "(i " << next_cell << ") "
+		 << "Length " << l << ", poro1 " << poro1 << ", poro2 " << poro2 << endl;
+	
+	    */
 	}
 	varpor = varpor/nsumpor;
 	sumpor = sumpor/(nsumpor*varpor);
@@ -123,6 +132,21 @@ int main(int argc, char** argv)
 	corrvec.push_back(sumpor);
     }
 
+    stringstream outputtmp;
+    
+    outputtmp << "#########################################################################" << endl
+	      << "# Correlation lengths for model " << ECLIPSEFILENAME << endl
+	      << "# Length  Corr" << endl;
+    for (int i=0; i<lvec.size(); ++i) {
+	outputtmp << lvec[i] << "\t" << corrvec[i] << endl;
+    }
+    
+    cout << outputtmp.str();
+    
+    ofstream outfile;
+    outfile.open("output_corrlengths.txt", ios::out | ios::trunc);
+    outfile << outputtmp.str();
+    outfile.close();
 
     return 0;
 }
