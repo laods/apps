@@ -88,6 +88,7 @@ int main(int argc, char** argv)
     vector<double> lvec;
     vector<double> corrvec;
     for (double l = size[0]/2; l > 10; l -= lmin) {
+        cout << "Calculating correlation for l=" << l << "... ";
 	double sumpor = 0.0;
 	double varpor = 0.0;
 	int nsumpor = 0;
@@ -128,6 +129,9 @@ int main(int argc, char** argv)
 	}
 	varpor = varpor/nsumpor;
 	sumpor = sumpor/(nsumpor*varpor);
+	
+	cout << "Correlation: " << sumpor << endl;
+	
 	lvec.push_back(l);
 	corrvec.push_back(sumpor);
     }
@@ -144,9 +148,12 @@ int main(int argc, char** argv)
     cout << outputtmp.str();
     
     ofstream outfile;
-    outfile.open("output_corrlengths.txt", ios::out | ios::trunc);
+    string outputfilename = "output_corrlengths.txt";
+    outfile.open(outputfilename, ios::out | ios::trunc);
     outfile << outputtmp.str();
     outfile.close();
+    
+    cout << "Output written to " << outputfilename << endl;
 
     return 0;
 }
