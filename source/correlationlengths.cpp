@@ -18,7 +18,6 @@ int position2cell(CI ibegin, CI iend, GridInterface::Vector pos)
     int c = -1;
     bool succeed = false;
     for (CI ci = ibegin; ci != iend; ++ci) {
-	c = ci->index();
 	for (FI fi = ci->facebegin(); fi != ci->faceend(); ++fi) {
 	    GridInterface::Vector v = pos - fi->centroid();
 	    if (fi->normal()*v > 0) {
@@ -27,7 +26,10 @@ int position2cell(CI ibegin, CI iend, GridInterface::Vector pos)
 	    }
 	    succeed = true;
 	}
-	if (succeed) break;
+	if (succeed) {
+	    c = ci->index();
+	    break;	    
+	}
     }
     return c; 
 }
@@ -84,7 +86,7 @@ int main(int argc, char** argv)
     size[2] = gridlimits[5]-gridlimits[4];
 
     const int N = 1000;
-    const double lmin [3] = {10, 10 ,1};
+    const double lmin [3] = {20, 20 ,1};
     vector< vector<double> > lvec;
     vector< vector<double> > corrvec;
     for (int dir=0; dir<3; ++dir) {
