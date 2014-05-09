@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <opm/core/io/eclipse/EclipseGridParser.hpp>
+#include <opm/porsol/common/GridInterfaceEuler.hpp>
 #include <opm/porsol/common/Rock.hpp>
 #include <dune/grid/CpGrid.hpp>
 
@@ -8,15 +9,15 @@ using namespace Opm;
 using namespace Dune;
 using namespace std;
 
-typedef GridInterfaceEuler<Dune::CpGrid> GridInterface;
+typedef GridInterfaceEuler<CpGrid> GridInterface;
+typedef GridInterface::CellIterator CI;
+typedef CI::FaceIterator FI;
 
-int position2cell(GridInterface gridinterface, GridInterface::Vector pos)
+int position2cell(CI ibegin, CI iend, GridInterface::Vector pos)
 {
-    typedef GridInterface::CellIterator CI;
-    typedef CI::FaceIterator FI;
     int c = -1;
     bool succeed = false;
-    for (CI ci = gridinterface.cellbegin(); ci != gridinterface.cellend(); ++ci) {
+    for (CI ci = ibegin; ci != iend; ++ci) {
 	c = ci->index();
 	for (FI fi = ci->facebegin(); fi != ci->faceend(); ++fi) {
 	    GridInterface::Vector v = pos - fi->centroid();
@@ -68,15 +69,15 @@ int main(int argc, char** argv)
 
     double porevol = 0.0;
     double volume  = 0.0;
-    for (CI ci = gridinterface.cellbegin(); ci != gridinterface.cellend(); ++ci) {
-	c = ci->index();
-	volume  += cell_iter->volume();
-	porevol += cell_iter->volume()*rock.porosity(c)
+    for (CI ci = gridinterf.cellbegin(); ci != gridinterf.cellend(); ++ci) {
+	int c = ci->index();
+	volume  += ci->volume();
+	porevol += ci->volume()*rock.porosity(c);
     }
-    meanporo = porevol/volume;
+    double meanporo = porevol/volume;
 
-    array<double,6> gridlimits = eclInspector.getGridLimits();
-    array<double,3> size;
+    std::array<double,6> gridlimits = eclInspector.getGridLimits();
+    std::array<double,3> size;
     size[0] = gridlimits[1]-gridlimits[0];
     size[1] = gridlimits[3]-gridlimits[2];
     size[2] = gridlimits[5]-gridlimits[4];
@@ -91,10 +92,10 @@ int main(int argc, char** argv)
 	int nsumpor = 0;
 	for (int i=0; i<N; ++i) {
 	    GridInterface::Vector pos;
-	    pos[0] = ((double) rand() / (RAND_MAX))*(length[0]-l) + gridlimits[0];
-	    pos[1] = ((double) rand() / (RAND_MAX))*length[1] + gridlimits[2];
-	    pos[2] = ((double) rand() / (RAND_MAX))*length[2] + gridlimits[4];
-	    int cell = position2cell(gridinterf, pos);
+	    pos[0] = ((double) rand() / (RAND_MAX))*(size[0]-l) + gridlimits[0];
+	    pos[1] = ((double) rand() / (RAND_MAX))*size[1] + gridlimits[2];
+	    pos[2] = ((double) rand() / (RAND_MAX))*size[2] + gridlimits[4];
+	    int cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), pos);
 	    if (cell == -1) {
 		cerr << "Could not find cell index at position [" 
 		     << pos[0] << ", " << pos[1] << ", " << pos[2] << "]" << endl;
@@ -102,17 +103,17 @@ int main(int argc, char** argv)
 	    
 	    GridInterface::Vector next_pos = pos;
 	    next_pos[0] = pos[0] + l;
-	    int next_cell = position2cell(gridinterf, next_pos);
+	    int next_cell = position2cell(gridinterf.cellbegin(), gridinterf.cellend(), next_pos);
 	    if (next_cell == -1) {
 		cerr << "Could not find cell index at position [" 
 		     << next_pos[0] << ", " << next_pos[1] << ", " << next_pos[2] << "]" << endl;
 	    }
 
-	    poro1 = rock.porosity(cell);
-	    poro2 = rock-porosity(next_cell);
+	    double poro1 = rock.porosity(cell);
+	    double poro2 = rock.porosity(next_cell);
 
-	    sumpor += (poro1 - meanpor) * (poro2 - meanpor);
-	    varpor += (poro1 - meanpor) * (poro1 - meanpor);
+	    sumpor += (poro1 - meanporo) * (poro2 - meanporo);
+	    varpor += (poro1 - meanporo) * (poro1 - meanporo);
 	    nsumpor++;
 	       
 	}
